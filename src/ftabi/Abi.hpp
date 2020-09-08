@@ -246,6 +246,16 @@ struct ParamCell : Param {
     auto make_copy() const -> Param* final { return new ParamCell{name_}; }
 };
 
+struct ValueMap : Value {
+    explicit ValueMap(ParamRef param, std::vector<std::pair<ValueRef, ValueRef>> values);
+    auto serialize() const -> td::Result<std::vector<BuilderData>> final;
+    auto deserialize(SliceData&& cursor, bool last) -> td::Result<SliceData> final;
+    auto to_string() const -> std::string final;
+    auto make_copy() const -> Value* final;
+
+    std::vector<std::pair<ValueRef, ValueRef>> values;
+};
+
 struct ParamMap : Param {
     explicit ParamMap(const std::string& name, ParamRef key, ParamRef value)
         : Param{name, ParamType::Map}
@@ -483,7 +493,7 @@ public:
     auto encode_input(FunctionCall& call) const -> td::Result<BuilderData>;
     auto encode_input(const td::Ref<FunctionCall>& call) const -> td::Result<BuilderData>;
     auto encode_input(const HeaderValues& header, const InputValues& inputs, bool internal, const std::optional<td::Ed25519::PrivateKey>& private_key) const
-        -> td::Result<BuilderData>;
+    -> td::Result<BuilderData>;
 
     auto decode_output(SliceData&& data) const -> td::Result<std::vector<ValueRef>>;
     auto decode_params(SliceData&& cursor) const -> td::Result<std::vector<ValueRef>>;
@@ -491,7 +501,7 @@ public:
     auto encode_header(const HeaderValues& header, bool internal) const -> td::Result<std::vector<BuilderData>>;
 
     auto create_unsigned_call(const HeaderValues& header, const InputValues& inputs, bool internal, bool reserve_sign) const
-        -> td::Result<std::pair<BuilderData, vm::CellHash>>;
+    -> td::Result<std::pair<BuilderData, vm::CellHash>>;
 
     auto make_copy() const -> Function* final;
 
