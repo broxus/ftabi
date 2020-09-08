@@ -306,8 +306,8 @@ auto ValueAddress::serialize() const -> td::Result<std::vector<BuilderData>>
 
     vm::CellBuilder cb{};
     CHECK(cb.store_long_bool(4, 3)                   // addr_std$10 anycast:(Maybe Anycast)
-              && cb.store_long_bool(value.workchain, 8)  // workchain:int8
-              && cb.store_bits_bool(value.addr));        // addr:bits256
+          && cb.store_long_bool(value.workchain, 8)  // workchain:int8
+          && cb.store_bits_bool(value.addr));        // addr:bits256
     return std::vector{cb.finalize()};
 }
 
@@ -723,9 +723,9 @@ auto compute_function_id(const std::string& signature) -> uint32_t
     td::sha256(td::Slice{signature}, td::MutableSlice{bytes, 32});
 
     return static_cast<uint32_t>(bytes[0]) << 24u |  //
-        static_cast<uint32_t>(bytes[1]) << 16u |  //
-        static_cast<uint32_t>(bytes[2]) << 8u |   //
-        static_cast<uint32_t>(bytes[3]);
+           static_cast<uint32_t>(bytes[1]) << 16u |  //
+           static_cast<uint32_t>(bytes[2]) << 8u |   //
+           static_cast<uint32_t>(bytes[3]);
 }
 
 auto compute_function_signature(const std::string& name, const InputParams& inputs, const OutputParams& outputs) -> std::string
@@ -910,8 +910,7 @@ auto Function::encode_header(const HeaderValues& header, bool internal) const ->
 }
 
 auto Function::create_unsigned_call(const HeaderValues& header, const InputValues& inputs, bool internal, bool reserve_sign) const
--> td::Result<std::pair<BuilderData, vm::CellHash>>
-
+    -> td::Result<std::pair<BuilderData, vm::CellHash>>
 {
     if (!check_params(inputs, inputs_)) {
         return td::Status::Error("invalid inputs");
@@ -976,9 +975,9 @@ static auto unpack_internal_address_opt(vm::CellSlice& cs, std::optional<block::
     block::StdAddress result{};
     td::Ref<vm::CellSlice> anycast;
     const auto success = tag == 2                                              //
-        && block::gen::t_Maybe_Anycast.fetch_to(cs, anycast)  //
-        && cs.fetch_int_to(8, result.workchain)               //
-        && cs.fetch_bits_to(result.addr.bits(), 256);
+                         && block::gen::t_Maybe_Anycast.fetch_to(cs, anycast)  //
+                         && cs.fetch_int_to(8, result.workchain)               //
+                         && cs.fetch_bits_to(result.addr.bits(), 256);
     if (success) {
         address = std::make_optional(result);
     }
@@ -995,9 +994,9 @@ static auto unpack_message(td::Ref<vm::Cell>& msg) -> td::Result<td::Ref<vm::Cel
 
     std::optional<block::StdAddress> src_address;
     const auto success = cs.fetch_ulong(2) == 3                                     // skip tag
-        && unpack_internal_address_opt(cs, src_address)            // skip src
-        && block::gen::t_MsgAddressExt.validate_skip(nullptr, cs)  // skip dst
-        && cs.advance(64 + 32);                                    // skip created_lt and created_at
+                         && unpack_internal_address_opt(cs, src_address)            // skip src
+                         && block::gen::t_MsgAddressExt.validate_skip(nullptr, cs)  // skip dst
+                         && cs.advance(64 + 32);                                    // skip created_lt and created_at
     if (!success) {
         return td::Status::Error("failed to fetch message header");
     }
@@ -1038,7 +1037,7 @@ static auto unpack_message(td::Ref<vm::Cell>& msg) -> td::Result<td::Ref<vm::Cel
 
 
 static auto prepare_vm_c7(ton::UnixTime now, ton::LogicalTime lt, td::Ref<vm::CellSlice> my_addr, const block::CurrencyCollection& balance)
--> td::Ref<vm::Tuple>
+    -> td::Ref<vm::Tuple>
 {
     td::BitArray<256> rand_seed;
     td::RefInt256 rand_seed_int{true};
@@ -1084,7 +1083,7 @@ auto run_smc_method(AccountStateInfo&& account, td::Ref<Function>&& function, td
             case block::gen::AccountState::account_uninit:
                 LOG(ERROR) << "account " << account.workchain << ":" << account.addr.to_hex() << " not initialized yet (cannot run any methods)";
                 return td::Status::Error(PSLICE()
-                                             << "account " << account.workchain << ":" << account.addr.to_hex() << " not initialized yet (cannot run any methods)");
+                                         << "account " << account.workchain << ":" << account.addr.to_hex() << " not initialized yet (cannot run any methods)");
             case block::gen::AccountState::account_frozen:
                 LOG(ERROR) << "account " << account.workchain << ":" << account.addr.to_hex() << " frozen (cannot run any methods)";
                 return td::Status::Error(PSLICE() << "account " << account.workchain << ":" << account.addr.to_hex() << " frozen (cannot run any methods)");
@@ -1098,8 +1097,17 @@ auto run_smc_method(AccountStateInfo&& account, td::Ref<Function>&& function, td
 
         // encode message and it's body
         TRY_RESULT(message_body, function->encode_input(function_call));
+
+        td::Ref<vm::Cell> message_body_ref;
+        if (function_call->body_as_ref) {
+            message_body_ref = vm::CellBuilder{}.store_ref(message_body).finalize();
+        }
+        else {
+            message_body_ref = message_body;
+        }
+        auto message = ton::GenericAccount::create_ext_message(block::StdAddress{account.workchain, account.addr}, {}, std::move(message_body_ref));
+
         auto message_body_cs = vm::load_cell_slice_ref(message_body);
-        auto message = ton::GenericAccount::create_ext_message(block::StdAddress{account.workchain, account.addr}, {}, message_body);
 
         // fill stack
         auto stack = td::make_ref<vm::Stack>();
@@ -1115,7 +1123,7 @@ auto run_smc_method(AccountStateInfo&& account, td::Ref<Function>&& function, td
         vm::VmState vm{state_init.code->prefetch_ref(),
                        std::move(stack),
                        vm::GasLimits{1'000'000'000},
-            /* flags */ 1,
+                       /* flags */ 1,
                        state_init.data->prefetch_ref(),
                        vm::VmLog{}};
 

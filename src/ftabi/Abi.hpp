@@ -482,6 +482,7 @@ struct FunctionCall : public td::CntObject {
     InputValues inputs{};
     bool internal{};
     std::optional<td::Ed25519::PrivateKey> private_key{};
+    bool body_as_ref{};
 };
 
 class Function : public td::CntObject {
